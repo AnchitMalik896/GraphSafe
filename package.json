@@ -1,0 +1,9 @@
+{
+  "name": "graphsafe",
+  "private": true,
+  "workspaces": [
+    "backend",
+    "frontend",
+    "shared"
+  ]
+}
