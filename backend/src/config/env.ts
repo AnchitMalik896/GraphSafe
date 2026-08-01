@@ -23,6 +23,7 @@ const envSchema = z.object({
   JWT_SECRET: z
     .string({ required_error: 'JWT_SECRET is required' })
     .min(1, 'JWT_SECRET cannot be empty'),
+  JWT_EXPIRES_IN: z.string().default('7d'),
   CORS_ORIGIN: z.string().default('http://localhost:3000'),
 });
 
