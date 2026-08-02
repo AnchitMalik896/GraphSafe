@@ -35,6 +35,10 @@ export class AppError extends Error {
     return new AppError(message, 404);
   }
 
+  static conflict(message: string, errors?: unknown[]): AppError {
+    return new AppError(message, 409, errors);
+  }
+
   static internal(message = 'Internal server error'): AppError {
     return new AppError(message, 500);
   }

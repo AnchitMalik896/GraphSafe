@@ -1,22 +1,45 @@
-import type { Prisma, Project } from '@prisma/client';
+import type { Project } from '@prisma/client';
 
 import { prisma } from '../database/prisma';
 
-/**
- * Data access for the Project model. Project business logic (GitHub
- * integration, ownership rules, etc.) is out of scope for this phase
- * and will live in project.service.ts when it is introduced.
- */
+export interface CreateProjectData {
+  name: string;
+  repositoryUrl: string;
+  userId: string;
+}
+
+export interface UpdateProjectData {
+  name?: string;
+  repositoryUrl?: string;
+}
+
 export const projectRepository = {
-  async findById(id: string): Promise<Project | null> {
+  create(data: CreateProjectData): Promise<Project> {
+    return prisma.project.create({ data });
+  },
+
+  findById(id: string): Promise<Project | null> {
     return prisma.project.findUnique({ where: { id } });
   },
 
-  async findManyByUserId(userId: string): Promise<Project[]> {
-    return prisma.project.findMany({ where: { userId } });
+  findByUser(userId: string): Promise<Project[]> {
+    return prisma.project.findMany({
+      where: { userId },
+      orderBy: { createdAt: 'desc' },
+    });
   },
 
-  async create(data: Prisma.ProjectCreateInput): Promise<Project> {
-    return prisma.project.create({ data });
+  findByRepositoryUrl(userId: string, repositoryUrl: string): Promise<Project | null> {
+    return prisma.project.findFirst({
+      where: { userId, repositoryUrl },
+    });
+  },
+
+  update(id: string, data: UpdateProjectData): Promise<Project> {
+    return prisma.project.update({ where: { id }, data });
+  },
+
+  delete(id: string): Promise<Project> {
+    return prisma.project.delete({ where: { id } });
   },
 };
