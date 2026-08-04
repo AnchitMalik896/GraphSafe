@@ -15,4 +15,14 @@ export const riskReportRepository = {
   async create(data: Prisma.RiskReportCreateInput): Promise<RiskReport> {
     return prisma.riskReport.create({ data });
   },
+
+   async findByScanIds(scanIds: string[]): Promise<RiskReport[]> {
+    if (scanIds.length === 0) {
+      return [];
+    }
+    return prisma.riskReport.findMany({
+      where: { scanId: { in: scanIds } },
+      orderBy: { generatedAt: 'desc' },
+    });
+  },
 };

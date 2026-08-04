@@ -19,4 +19,14 @@ export const scanRepository = {
   async create(data: Prisma.ScanCreateInput): Promise<Scan> {
     return prisma.scan.create({ data });
   },
+
+  async findManyByProjectIds(projectIds: string[]): Promise<Scan[]> {
+    if (projectIds.length === 0) {
+      return [];
+    }
+    return prisma.scan.findMany({
+      where: { projectId: { in: projectIds } },
+      orderBy: { createdAt: 'desc' },
+    });
+  },
 };

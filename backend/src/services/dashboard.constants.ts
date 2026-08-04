@@ -1,0 +1,3 @@
+export const RECENT_SCANS_LIMIT = 10;
+
+export const AVERAGE_SCORE_DECIMAL_PLACES = 2;

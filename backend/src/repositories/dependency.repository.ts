@@ -40,4 +40,18 @@ export const dependencyRepository = {
   deleteByScan(scanId: string): Promise<{ count: number }> {
     return prisma.dependency.deleteMany({ where: { scanId } });
   },
+
+   async countByScanIds(scanIds: string[]): Promise<Map<string, number>> {
+    if (scanIds.length === 0) {
+      return new Map();
+    }
+
+    const grouped = await prisma.dependency.groupBy({
+      by: ['scanId'],
+      where: { scanId: { in: scanIds } },
+      _count: { _all: true },
+    });
+
+    return new Map(grouped.map((row) => [row.scanId, row._count._all]));
+  },
 };
