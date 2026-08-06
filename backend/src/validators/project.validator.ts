@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-const githubRepositoryUrlSchema = z
+export const githubRepositoryUrlSchema = z
   .string()
   .trim()
   .max(500, 'Repository URL must be at most 500 characters')

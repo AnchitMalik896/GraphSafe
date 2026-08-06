@@ -2,15 +2,8 @@ import type { Request, Response } from 'express';
 
 import * as projectService from '../services/project.service';
 import type { ApiSuccessResponse } from '../types/api';
-import { AppError } from '../utils/AppError';
 import { asyncHandler } from '../utils/asyncHandler';
-
-function requireUser(req: Request): { id: string } {
-  if (!req.user) {
-    throw AppError.unauthorized();
-  }
-  return req.user;
-}
+import { requireUser } from '../utils/requireUser';
 
 export const createProject = asyncHandler(async (req: Request, res: Response) => {
   const user = requireUser(req);
