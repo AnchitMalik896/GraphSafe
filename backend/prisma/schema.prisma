@@ -54,7 +54,11 @@ model Scan {
   dependencies Dependency[]
   riskReport   RiskReport?
 
-  @@index([projectId])
+  // Widened from @@index([projectId]): a composite index on
+  // (projectId, status) still serves every existing projectId-only
+  // lookup (leftmost-prefix rule) while also covering status-filtered
+  // dashboard queries, so one index replaces two.
+  @@index([projectId, status])
 }
 
 model Dependency {
@@ -80,18 +84,15 @@ enum RiskLevel {
 }
 
 model RiskReport {
-  id                 String   @id @default(cuid())
-  scanId             String   @unique
-
+  id                 String    @id @default(uuid())
+  scanId             String    @unique
   vulnerablePackages Int
   outdatedPackages   Int
   deprecatedPackages Int
-
-  totalFindings      Int
   overallRiskScore   Float
   riskLevel          RiskLevel
-
-  generatedAt        DateTime @default(now())
+  totalFindings      Int
+  generatedAt        DateTime  @default(now())
 
   scan Scan @relation(fields: [scanId], references: [id], onDelete: Cascade)
 }

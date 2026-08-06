@@ -1,17 +1,10 @@
-import { Prisma, type Project } from '@prisma/client';
+import type { Project } from '@prisma/client';
 
 import { projectRepository } from '../repositories/project.repository';
 import { AppError } from '../utils/AppError';
+import { isPrismaUniqueConstraintViolation } from '../utils/prismaErrors';
 import type { CreateProjectInput, UpdateProjectInput } from '../validators/project.validator';
 
-/** Prisma's unique-constraint-violation error code. */
-const PRISMA_UNIQUE_CONSTRAINT_VIOLATION = 'P2002';
-
-/**
- * Loads a project and verifies it belongs to the given user in one step.
- * Returns 404 — not 403 — when the project exists but belongs to someone
- * else, so we never reveal that another user's project exists.
- */
 async function getOwnedProjectOrThrow(userId: string, projectId: string): Promise<Project> {
   const project = await projectRepository.findById(projectId);
 
@@ -22,10 +15,12 @@ async function getOwnedProjectOrThrow(userId: string, projectId: string): Promis
   return project;
 }
 
+const DUPLICATE_REPOSITORY_URL_MESSAGE = 'You have already added a project with this repository URL';
+
 export async function createProject(userId: string, input: CreateProjectInput): Promise<Project> {
   const existing = await projectRepository.findByRepositoryUrl(userId, input.repositoryUrl);
   if (existing) {
-    throw AppError.conflict('You have already added a project with this repository URL');
+    throw AppError.conflict(DUPLICATE_REPOSITORY_URL_MESSAGE);
   }
 
   try {
@@ -37,11 +32,8 @@ export async function createProject(userId: string, input: CreateProjectInput): 
   } catch (error) {
     // Defends against a race between the check above and the insert below
     // (two concurrent requests for the same user + repository URL).
-    if (
-      error instanceof Prisma.PrismaClientKnownRequestError &&
-      error.code === PRISMA_UNIQUE_CONSTRAINT_VIOLATION
-    ) {
-      throw AppError.conflict('You have already added a project with this repository URL');
+    if (isPrismaUniqueConstraintViolation(error)) {
+      throw AppError.conflict(DUPLICATE_REPOSITORY_URL_MESSAGE);
     }
     throw error;
   }
@@ -65,7 +57,7 @@ export async function updateProject(
   if (input.repositoryUrl && input.repositoryUrl !== project.repositoryUrl) {
     const existing = await projectRepository.findByRepositoryUrl(userId, input.repositoryUrl);
     if (existing) {
-      throw AppError.conflict('You have already added a project with this repository URL');
+      throw AppError.conflict(DUPLICATE_REPOSITORY_URL_MESSAGE);
     }
   }
 
@@ -75,11 +67,8 @@ export async function updateProject(
       repositoryUrl: input.repositoryUrl,
     });
   } catch (error) {
-    if (
-      error instanceof Prisma.PrismaClientKnownRequestError &&
-      error.code === PRISMA_UNIQUE_CONSTRAINT_VIOLATION
-    ) {
-      throw AppError.conflict('You have already added a project with this repository URL');
+    if (isPrismaUniqueConstraintViolation(error)) {
+      throw AppError.conflict(DUPLICATE_REPOSITORY_URL_MESSAGE);
     }
     throw error;
   }

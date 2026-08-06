@@ -2,12 +2,13 @@ import type { Dependency, Scan } from '@prisma/client';
 import { readFile } from 'fs/promises';
 import path from 'path';
 
+import { withTransaction } from '../database/transaction';
 import { EmptyManifestError, InvalidPackageJsonError } from '../parsers/parser.errors';
 import { packageParser } from '../parsers/packageParser';
+import type { ParsedDependency } from '../parsers/parser.types';
 import { dependencyRepository } from '../repositories/dependency.repository';
 import { scanRepository } from '../repositories/scan.repository';
 import type { GithubScanResultDto } from '../types/githubScan';
-import type { RiskScoringResult } from '../types/scoring';
 import { AppError } from '../utils/AppError';
 import { cloneRepository, validateRepositoryUrl } from './github.service';
 import { getProject } from './project.service';
@@ -24,6 +25,27 @@ interface DependencyRiskCounts {
   deprecatedPackages: number;
 }
 
+async function readAndParseManifest(workspacePath: string): Promise<ParsedDependency[]> {
+  const manifestPath = path.join(workspacePath, PACKAGE_MANIFEST_FILENAME);
+
+  let manifestRaw: string;
+  try {
+    manifestRaw = await readFile(manifestPath, 'utf-8');
+  } catch {
+    throw AppError.badRequest(`Repository does not contain a ${PACKAGE_MANIFEST_FILENAME} at its root`);
+  }
+
+  try {
+    return packageParser.parse(manifestRaw);
+  } catch (error) {
+    if (error instanceof EmptyManifestError || error instanceof InvalidPackageJsonError) {
+      throw AppError.badRequest(error.message);
+    }
+    throw error;
+  }
+}
+
+
 function countDependencyRiskCategories(dependencies: Dependency[]): DependencyRiskCounts {
   return dependencies.reduce<DependencyRiskCounts>(
     (counts, dependency) => ({
@@ -37,20 +59,35 @@ function countDependencyRiskCategories(dependencies: Dependency[]): DependencyRi
   );
 }
 
-function toGithubScanResultDto(params: {
-  scan: Scan;
-  dependencyCount: number;
-  scoring: RiskScoringResult;
-  generatedAt: Date;
-}): GithubScanResultDto {
-  return {
-    scanId: params.scan.id,
-    dependencyCount: params.dependencyCount,
-    totalFindings: params.scoring.totalFindings,
-    overallRiskScore: params.scoring.overallRiskScore,
-    riskLevel: params.scoring.riskLevel,
-    generatedAt: params.generatedAt.toISOString(),
-  };
+
+async function scoreAndCompleteScan(scan: Scan) {
+  const analysisReport = await riskAnalysisService.analyzeScan(scan.id);
+  const scoringResult = riskScoringService.computeRiskScore(analysisReport);
+
+  const persistedDependencies = await dependencyRepository.findByScan(scan.id);
+  const categoryCounts = countDependencyRiskCategories(persistedDependencies);
+
+  return withTransaction(async (tx) => {
+    const riskReport = await riskReportService.createReport(
+      {
+        scanId: scan.id,
+        ...categoryCounts,
+        overallRiskScore: scoringResult.overallRiskScore,
+        riskLevel: scoringResult.riskLevel,
+        totalFindings: scoringResult.totalFindings,
+      },
+      tx,
+    );
+
+    const completedAt = new Date();
+    await scanRepository.update(
+      scan.id,
+      { status: 'COMPLETED', riskScore: scoringResult.overallRiskScore, scannedAt: completedAt, completedAt },
+      tx,
+    );
+
+    return riskReport;
+  });
 }
 
 /** Best-effort — never lets a secondary failure mask the original error. */
@@ -76,25 +113,7 @@ export const githubScanService = {
     try {
       await cloneRepository(repositoryUrl, workspacePath);
 
-      const manifestPath = path.join(workspacePath, PACKAGE_MANIFEST_FILENAME);
-      let manifestRaw: string;
-      try {
-        manifestRaw = await readFile(manifestPath, 'utf-8');
-      } catch {
-        throw AppError.badRequest(
-          `Repository does not contain a ${PACKAGE_MANIFEST_FILENAME} at its root`,
-        );
-      }
-
-      let parsedDependencies;
-      try {
-        parsedDependencies = packageParser.parse(manifestRaw);
-      } catch (error) {
-        if (error instanceof EmptyManifestError || error instanceof InvalidPackageJsonError) {
-          throw AppError.badRequest(error.message);
-        }
-        throw error;
-      }
+      const parsedDependencies = await readAndParseManifest(workspacePath);
 
       scan = await scanRepository.create({
         project: { connect: { id: project.id } },
@@ -105,32 +124,16 @@ export const githubScanService = {
 
       await dependencyRepository.createMany(scan.id, parsedDependencies);
 
-      const analysisReport = await riskAnalysisService.analyzeScan(scan.id);
-      const scoringResult = riskScoringService.computeRiskScore(analysisReport);
+      const riskReport = await scoreAndCompleteScan(scan);
 
-      const persistedDependencies = await dependencyRepository.findByScan(scan.id);
-      const categoryCounts = countDependencyRiskCategories(persistedDependencies);
-
-      const riskReport = await riskReportService.createReport({
+      return {
         scanId: scan.id,
-        ...categoryCounts,
-        overallRiskScore: scoringResult.overallRiskScore,
-      });
-
-      const completedAt = new Date();
-      await scanRepository.update(scan.id, {
-        status: 'COMPLETED',
-        riskScore: scoringResult.overallRiskScore,
-        scannedAt: completedAt,
-        completedAt,
-      });
-
-      return toGithubScanResultDto({
-        scan,
         dependencyCount: parsedDependencies.length,
-        scoring: scoringResult,
-        generatedAt: riskReport.generatedAt,
-      });
+        totalFindings: riskReport.totalFindings,
+        overallRiskScore: riskReport.overallRiskScore,
+        riskLevel: riskReport.riskLevel,
+        generatedAt: riskReport.generatedAt.toISOString(),
+      };
     } catch (error) {
       if (scan) {
         await markScanFailed(scan.id);

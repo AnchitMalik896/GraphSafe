@@ -1,8 +1,9 @@
-import type { RiskLevel } from './scoring';
+import type { RiskLevel } from '@prisma/client';
 
 export interface GithubScanRequestBody {
   repositoryUrl: string;
 }
+
 export interface GithubScanResultDto {
   scanId: string;
   dependencyCount: number;

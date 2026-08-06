@@ -2,8 +2,7 @@ import { Router } from 'express';
 
 import { getMe, login, register } from '../controllers/auth.controller';
 import { authenticate } from '../middleware/auth';
-import { loginSchema } from '../validators/auth/login.schema';
-import { registerSchema } from '../validators/auth/register.schema';
+import { loginSchema, registerSchema } from '../validators/auth.validator';
 import { validate } from '../validators/validate';
 
 const router = Router();

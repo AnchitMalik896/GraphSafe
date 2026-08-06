@@ -10,11 +10,6 @@ export interface ParsedDependency {
   dependencyType: DependencyType;
 }
 
-/**
- * Minimal shape of a package.json this parser cares about. Any other
- * fields a real package.json contains (scripts, main, license, etc.)
- * are ignored entirely.
- */
 export interface PackageManifestInput {
   dependencies?: Record<string, string>;
   devDependencies?: Record<string, string>;
