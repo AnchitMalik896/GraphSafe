@@ -1,8 +1,10 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
 
 import { RootLayout } from '@/components/layout/RootLayout';
+import CreateProjectPage from '@/pages/CreateProjectPage';
 import DashboardPage from '@/pages/DashboardPage';
 import LoginPage from '@/pages/LoginPage';
+import ProjectDetailsPage from '@/pages/ProjectDetailsPage';
 import ProjectsPage from '@/pages/ProjectsPage';
 import RegisterPage from '@/pages/RegisterPage';
 import { GuestRoute } from '@/routes/GuestRoute';
@@ -25,6 +27,8 @@ export function AppRouter() {
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
           <Route path="/dashboard" element={<DashboardPage />} />
           <Route path="/projects" element={<ProjectsPage />} />
+          <Route path="/projects/new" element={<CreateProjectPage />} />
+          <Route path="/projects/:projectId" element={<ProjectDetailsPage />} />
           <Route path="/analysis" element={<PlaceholderPage title="Analysis" />} />
           <Route path="/settings" element={<PlaceholderPage title="Settings" />} />
         </Route>
