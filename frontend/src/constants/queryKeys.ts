@@ -6,4 +6,8 @@ export const queryKeys = {
   dashboard: {
     all: ['dashboard'] as const,
   },
+  scans: {
+    detail: (projectId: string, scanId: string) =>
+      ['projects', projectId, 'scans', scanId] as const,
+  },
 } as const;

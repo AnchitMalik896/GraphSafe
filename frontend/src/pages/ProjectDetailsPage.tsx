@@ -1,6 +1,6 @@
-import { AlertTriangle, Loader2, ScanLine } from 'lucide-react';
+import { AlertTriangle, ExternalLink, Loader2, ScanLine } from 'lucide-react';
 import { useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
 
 import { EmptyState } from '@/components/common/EmptyState';
@@ -98,8 +98,15 @@ export default function ProjectDetailsPage() {
         </div>
 
         {scanResult && (
-          <div className="mt-4">
+          <div className="mt-4 space-y-3">
             <ScanResultCard result={scanResult} />
+            <Link
+              to={`/projects/${project.id}/scans/${scanResult.scanId}`}
+              className="inline-flex items-center gap-1.5 text-sm font-medium text-primary underline underline-offset-4"
+            >
+              View Scan Details
+              <ExternalLink className="h-3.5 w-3.5" />
+            </Link>
           </div>
         )}
       </div>

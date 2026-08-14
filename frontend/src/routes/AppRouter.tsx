@@ -7,6 +7,7 @@ import LoginPage from '@/pages/LoginPage';
 import ProjectDetailsPage from '@/pages/ProjectDetailsPage';
 import ProjectsPage from '@/pages/ProjectsPage';
 import RegisterPage from '@/pages/RegisterPage';
+import ScanDetailsPage from '@/pages/ScanDetailsPage';
 import { GuestRoute } from '@/routes/GuestRoute';
 import { ProtectedRoute } from '@/routes/ProtectedRoute';
 
@@ -29,6 +30,7 @@ export function AppRouter() {
           <Route path="/projects" element={<ProjectsPage />} />
           <Route path="/projects/new" element={<CreateProjectPage />} />
           <Route path="/projects/:projectId" element={<ProjectDetailsPage />} />
+          <Route path="/projects/:projectId/scans/:scanId" element={<ScanDetailsPage />} />
           <Route path="/analysis" element={<PlaceholderPage title="Analysis" />} />
           <Route path="/settings" element={<PlaceholderPage title="Settings" />} />
         </Route>
