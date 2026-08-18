@@ -1,5 +1,12 @@
-import { AlertTriangle, Layers, ListChecks, PackageX, ShieldAlert, ShieldOff } from 'lucide-react';
-import { Loader2 } from 'lucide-react';
+import {
+  AlertTriangle,
+  Layers,
+  ListChecks,
+  Loader2,
+  PackageX,
+  ShieldAlert,
+  ShieldOff,
+} from 'lucide-react';
 import { Link, useParams } from 'react-router-dom';
 
 import { EmptyState } from '@/components/common/EmptyState';

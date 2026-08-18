@@ -1,3 +1,10 @@
+import { AppProviders } from '@/providers/AppProviders';
+import { AppRouter } from '@/routes/AppRouter';
+
 export default function App() {
-  return <div>GraphSafe frontend scaffold — routing added in next chunk.</div>;
+  return (
+    <AppProviders>
+      <AppRouter />
+    </AppProviders>
+  );
 }
