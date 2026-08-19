@@ -1,100 +1,44 @@
 -- CreateEnum
-CREATE TYPE "ScanStatus" AS ENUM ('PENDING', 'RUNNING', 'COMPLETED', 'FAILED');
+CREATE TYPE "Severity" AS ENUM ('LOW', 'MEDIUM', 'HIGH', 'CRITICAL');
 
--- CreateEnum
-CREATE TYPE "RiskLevel" AS ENUM ('LOW', 'MEDIUM', 'HIGH', 'CRITICAL');
-
--- CreateTable
-CREATE TABLE "User" (
-    "id" TEXT NOT NULL,
-    "name" TEXT NOT NULL,
-    "email" TEXT NOT NULL,
-    "passwordHash" TEXT NOT NULL,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL,
-
-    CONSTRAINT "User_pkey" PRIMARY KEY ("id")
-);
+-- AlterTable
+ALTER TABLE "Scan"
+  ADD COLUMN "riskScoreV2" INTEGER NOT NULL DEFAULT 0,
+  ADD COLUMN "criticalCount" INTEGER NOT NULL DEFAULT 0,
+  ADD COLUMN "highCount" INTEGER NOT NULL DEFAULT 0,
+  ADD COLUMN "mediumCount" INTEGER NOT NULL DEFAULT 0,
+  ADD COLUMN "lowCount" INTEGER NOT NULL DEFAULT 0;
 
 -- CreateTable
-CREATE TABLE "Project" (
-    "id" TEXT NOT NULL,
-    "name" TEXT NOT NULL,
-    "repositoryUrl" TEXT NOT NULL,
-    "userId" TEXT NOT NULL,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL,
-
-    CONSTRAINT "Project_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "Scan" (
-    "id" TEXT NOT NULL,
-    "projectId" TEXT NOT NULL,
-    "status" "ScanStatus" NOT NULL DEFAULT 'PENDING',
-    "riskScore" DOUBLE PRECISION,
-    "scannedAt" TIMESTAMP(3),
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "completedAt" TIMESTAMP(3),
-    "manifestFiles" TEXT[] DEFAULT ARRAY[]::TEXT[],
-    "ecosystems" TEXT[] DEFAULT ARRAY[]::TEXT[],
-
-    CONSTRAINT "Scan_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "Dependency" (
+CREATE TABLE "Finding" (
     "id" TEXT NOT NULL,
     "scanId" TEXT NOT NULL,
+    "dependencyId" TEXT NOT NULL,
+    "advisoryId" TEXT NOT NULL,
     "packageName" TEXT NOT NULL,
-    "version" TEXT NOT NULL,
-    "latestVersion" TEXT,
-    "vulnerable" BOOLEAN NOT NULL DEFAULT false,
-    "deprecated" BOOLEAN NOT NULL DEFAULT false,
-    "popularityScore" DOUBLE PRECISION,
+    "packageVersion" TEXT NOT NULL,
+    "title" TEXT NOT NULL,
+    "summary" TEXT,
+    "severity" "Severity" NOT NULL,
+    "fixedVersion" TEXT,
+    "source" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
 
-    CONSTRAINT "Dependency_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "RiskReport" (
-    "id" TEXT NOT NULL,
-    "scanId" TEXT NOT NULL,
-    "vulnerablePackages" INTEGER NOT NULL,
-    "outdatedPackages" INTEGER NOT NULL,
-    "deprecatedPackages" INTEGER NOT NULL,
-    "overallRiskScore" DOUBLE PRECISION NOT NULL,
-    "riskLevel" "RiskLevel" NOT NULL,
-    "totalFindings" INTEGER NOT NULL,
-    "generatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-    CONSTRAINT "RiskReport_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "Finding_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateIndex
-CREATE UNIQUE INDEX "User_email_key" ON "User"("email");
+CREATE INDEX "Finding_scanId_idx" ON "Finding"("scanId");
 
 -- CreateIndex
-CREATE INDEX "Project_userId_idx" ON "Project"("userId");
+CREATE INDEX "Finding_dependencyId_idx" ON "Finding"("dependencyId");
 
 -- CreateIndex
-CREATE INDEX "Scan_projectId_status_idx" ON "Scan"("projectId", "status");
-
--- CreateIndex
-CREATE INDEX "Dependency_scanId_idx" ON "Dependency"("scanId");
-
--- CreateIndex
-CREATE UNIQUE INDEX "RiskReport_scanId_key" ON "RiskReport"("scanId");
+CREATE INDEX "Finding_severity_idx" ON "Finding"("severity");
 
 -- AddForeignKey
-ALTER TABLE "Project" ADD CONSTRAINT "Project_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "Finding" ADD CONSTRAINT "Finding_scanId_fkey" FOREIGN KEY ("scanId") REFERENCES "Scan"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Scan" ADD CONSTRAINT "Scan_projectId_fkey" FOREIGN KEY ("projectId") REFERENCES "Project"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "Dependency" ADD CONSTRAINT "Dependency_scanId_fkey" FOREIGN KEY ("scanId") REFERENCES "Scan"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "RiskReport" ADD CONSTRAINT "RiskReport_scanId_fkey" FOREIGN KEY ("scanId") REFERENCES "Scan"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "Finding" ADD CONSTRAINT "Finding_dependencyId_fkey" FOREIGN KEY ("dependencyId") REFERENCES "Dependency"("id") ON DELETE CASCADE ON UPDATE CASCADE;

@@ -50,9 +50,21 @@ model Scan {
   manifestFiles String[]   @default([])
   ecosystems    String[]   @default([])
 
+  // --- Phase 1: Security Findings Data Model ---
+  // Denormalized read-optimized counters. Nothing writes these yet;
+  // a future risk-scoring phase populates them from Finding rows.
+  // Named riskScoreV2 to avoid colliding with the existing `riskScore`
+  // Float field already used by riskScoring.service.ts / dashboard.service.ts.
+  riskScoreV2   Int        @default(0)
+  criticalCount Int        @default(0)
+  highCount     Int        @default(0)
+  mediumCount   Int        @default(0)
+  lowCount      Int        @default(0)
+
   project      Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
   dependencies Dependency[]
   riskReport   RiskReport?
+  findings     Finding[]
 
   // Widened from @@index([projectId]): a composite index on
   // (projectId, status) still serves every existing projectId-only
@@ -71,7 +83,8 @@ model Dependency {
   deprecated      Boolean @default(false)
   popularityScore Float?
 
-  scan Scan @relation(fields: [scanId], references: [id], onDelete: Cascade)
+  scan     Scan      @relation(fields: [scanId], references: [id], onDelete: Cascade)
+  findings Finding[]
 
   @@index([scanId])
 }
@@ -95,4 +108,43 @@ model RiskReport {
   generatedAt        DateTime  @default(now())
 
   scan Scan @relation(fields: [scanId], references: [id], onDelete: Cascade)
+}
+
+// --- Phase 1: Security Findings Data Model ---
+
+enum Severity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+model Finding {
+  id             String   @id @default(uuid())
+  scanId         String
+  dependencyId   String
+
+  advisoryId     String
+
+  packageName    String
+  packageVersion String
+
+  title          String
+  summary        String?
+
+  severity       Severity
+
+  fixedVersion   String?
+
+  source         String
+
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  scan       Scan       @relation(fields: [scanId], references: [id], onDelete: Cascade)
+  dependency Dependency @relation(fields: [dependencyId], references: [id], onDelete: Cascade)
+
+  @@index([scanId])
+  @@index([dependencyId])
+  @@index([severity])
 }
